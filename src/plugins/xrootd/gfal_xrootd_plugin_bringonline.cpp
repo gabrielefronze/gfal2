@@ -343,7 +343,7 @@ int gfal_xrootd_abort_files(plugin_handle plugin_data,
     }
 
     XrdCl::Buffer *reponsePtr;
-    XrdCl::Status st = fs.Prepare(fileList, XrdCl::PrepareFlags::Flags::Cancel, 0, reponsePtr);
+    XrdCl::Status st = fs.Prepare(fileList, XrdCl::PrepareFlags::Flags::Fresh, 0, reponsePtr);
     std::unique_ptr<XrdCl::Buffer> response(reponsePtr);
 
     if (!st.IsOK()) {
