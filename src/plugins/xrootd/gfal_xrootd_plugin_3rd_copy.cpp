@@ -64,7 +64,7 @@ public:
         }
     }
 
-#if XrdMajorVNUM(XrdVNUMBER) == 4
+
     void EndJob(uint16_t jobNum, const XrdCl::PropertyList* result)
     {
         std::ostringstream msg;
@@ -84,21 +84,10 @@ public:
         plugin_trigger_event(this->params, xrootd_domain, GFAL_EVENT_NONE,
                 GFAL_EVENT_TRANSFER_EXIT, "%s", msg.str().c_str());
     }
-#else
-    void EndJob(const XrdCl::XRootDStatus &status)
-    {
-        plugin_trigger_event(this->params, xrootd_domain,
-                GFAL_EVENT_NONE, GFAL_EVENT_TRANSFER_EXIT,
-                "%s", status.ToStr().c_str());
-    }
-#endif
 
-#if XrdMajorVNUM(XrdVNUMBER) == 4
+
     void JobProgress(uint16_t jobNum, uint64_t bytesProcessed,
             uint64_t bytesTotal)
-#else
-    void JobProgress(uint64_t bytesProcessed, uint64_t bytesTotal)
-#endif
     {
         time_t now = time(NULL);
         time_t elapsed = now - this->startTime;
@@ -205,12 +194,11 @@ int gfal_xrootd_3rd_copy_bulk(plugin_handle plugin_data,
         _checksumValue, sizeof(_checksumValue), NULL);
 
     XrdCl::CopyProcess copy_process;
-#if XrdMajorVNUM(XrdVNUMBER) == 4 ||  XrdMajorVNUM(XrdVNUMBER) == 100
     std::vector<XrdCl::PropertyList> results;
     for (size_t i = 0; i < nbfiles; ++i) {
         results.push_back(XrdCl::PropertyList());
     }
-#endif
+
 
     const char* src_spacetoken =  gfalt_get_src_spacetoken(params, NULL);
     const char* dst_spacetoken =  gfalt_get_dst_spacetoken(params, NULL);
@@ -220,7 +208,6 @@ int gfal_xrootd_3rd_copy_bulk(plugin_handle plugin_data,
         gfal_xrootd_3rd_init_url(context, source_url, srcs[i], src_spacetoken);
         gfal_xrootd_3rd_init_url(context, dest_url, dsts[i], dst_spacetoken);
 
-#if XrdMajorVNUM(XrdVNUMBER) == 4 || XrdMajorVNUM(XrdVNUMBER) == 100
         XrdCl::PropertyList job;
 
         job.Set("source", source_url.GetURL());
@@ -236,26 +223,7 @@ int gfal_xrootd_3rd_copy_bulk(plugin_handle plugin_data,
             job.Set("thirdParty", "first");
         }
         job.Set("tpcTimeout", gfalt_get_timeout(params, NULL));
-#else
-        XrdCl::JobDescriptor job;
 
-        job.source = source_url;
-        job.target = dest_url;
-        job.force = gfalt_get_replace_existing_file(params, NULL);;
-        job.posc = true;
-
-        if ((source_url.GetProtocol() == "root") && (dest_url.GetProtocol() == "root")) {
-            job.thirdParty = true;
-            job.thirdPartyFallBack = false;
-            isThirdParty = true;
-        }
-        else {
-            job.thirdParty = false;
-            job.thirdPartyFallBack = false;
-        }
-
-        job.checkSumPrint = false;
-#endif
 
         if (checksumMode) {
             char checksumType[64] = { 0 };
@@ -267,7 +235,7 @@ int gfal_xrootd_3rd_copy_bulk(plugin_handle plugin_data,
             strncpy(checksumValue, s, sizeof(s));
             checksumType[63] = checksumValue[511] = '\0';
             g_strfreev(chks);
-	    gfal2_log(G_LOG_LEVEL_DEBUG, "Predefined Checksum Type: %s", checksumType);
+	        gfal2_log(G_LOG_LEVEL_DEBUG, "Predefined Checksum Type: %s", checksumType);
             gfal2_log(G_LOG_LEVEL_DEBUG, "Predefined Checksum Value: %s", checksumValue);
             if (!checksumType[0]) {
                 char* defaultChecksumType = gfal2_get_opt_string(context, XROOTD_CONFIG_GROUP, XROOTD_DEFAULT_CHECKSUM, &internalError);
@@ -282,7 +250,7 @@ int gfal_xrootd_3rd_copy_bulk(plugin_handle plugin_data,
                 g_free(defaultChecksumType);
             }
 
-#if XrdMajorVNUM(XrdVNUMBER) == 4 ||  XrdMajorVNUM(XrdVNUMBER) == 100
+
             switch (checksumMode) {
                 case GFALT_CHECKSUM_BOTH:
                     job.Set("checkSumMode", "end2end");
@@ -298,22 +266,15 @@ int gfal_xrootd_3rd_copy_bulk(plugin_handle plugin_data,
             }
             job.Set("checkSumType", predefined_checksum_type_to_lower(checksumType));
             job.Set("checkSumPreset", checksumValue);
-#else
-            job.checkSumType = predefined_checksum_type_to_lower(checksumType);
-            job.checkSumPreset = checksumValue;
-#endif
+
         }
 
-#if XrdMajorVNUM(XrdVNUMBER) == 4 || XrdMajorVNUM(XrdVNUMBER) == 100
         copy_process.AddJob(job, &(results[i]));
-#else
-        copy_process.AddJob(&job);
-#endif
+
 
     }
 
     // Configuration job
-#if XrdMajorVNUM(XrdVNUMBER) == 4 ||  XrdMajorVNUM(XrdVNUMBER) == 100
     int parallel = gfal2_get_opt_integer_with_default(context,
             XROOTD_CONFIG_GROUP, XROOTD_PARALLEL_COPIES,
             20);
@@ -322,7 +283,7 @@ int gfal_xrootd_3rd_copy_bulk(plugin_handle plugin_data,
     config_job.Set("jobType", "configuration");
     config_job.Set("parallel", parallel);
     copy_process.AddJob(config_job, NULL);
-#endif
+
 
     XrdCl::XRootDStatus status = copy_process.Prepare();
     if (!status.IsOK()) {
@@ -346,7 +307,6 @@ int gfal_xrootd_3rd_copy_bulk(plugin_handle plugin_data,
 
     // For bulk operations, here we do get the actual status per file
     int n_failed = 0;
-#if XrdMajorVNUM(XrdVNUMBER) == 4
     *file_errors = g_new0(GError*, nbfiles);
     for (size_t i = 0; i < nbfiles; ++i) {
         status = results[i].Get<XrdCl::XRootDStatus>("status");
@@ -358,7 +318,7 @@ int gfal_xrootd_3rd_copy_bulk(plugin_handle plugin_data,
             ++n_failed;
         }
     }
-#endif
+
     return -n_failed;
 }
 
