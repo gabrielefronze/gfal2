@@ -26,7 +26,9 @@
 #undef TRUE
 #undef FALSE
 
+#include <memory>
 #include <XrdCl/XrdClCopyProcess.hh>
+#include <XrdCl/XrdClFileSystem.hh>
 #include <XrdVersion.hh>
 
 
@@ -178,6 +180,41 @@ static int gfal_xrootd_copy_cleanup(plugin_handle plugin_data, const char* dst, 
     return -1;
 }
 
+//this is invoked when a tranfer is success and we
+static void gfal_xrootd_evict_cache(gfal2_context_t context, const char* src)
+{
+
+    XrdCl::URL endpoint(prepare_url(context, src));
+    endpoint.SetPath(std::string());
+    XrdCl::FileSystem fs(endpoint);
+
+    //first check if the version of Xrootd is fine, we tend to run this command towards SLAC Xrootd only with version >= 4.10
+
+    XrdCl::Buffer *response = 0;
+    std::string version_arg = std::string("version");
+
+    XrdCl::Buffer arg( version_arg.size() );
+    arg.FromString( version_arg );
+
+    XrdCl::XRootDStatus status = fs.Query( XrdCl::QueryCode::Config, arg, response );
+    
+    gfal2_log(G_LOG_LEVEL_DEBUG, "Response: %s", response->GetBuffer());
+
+    delete response;
+
+
+    //evict 
+    std::vector<std::string> fileList;
+    XrdCl::URL file(prepare_url(context, src));
+    fileList.emplace_back(file.GetPath());
+   
+    XrdCl::Buffer *responsePtr = 0;
+    //XrdCl::Status st = fs.Prepare(fileList, XrdCl::PrepareFlags::Flags::Evict, 0, responsePtr, 30);
+    if (responsePtr) {
+    	delete responsePtr;
+    }
+}
+
 int gfal_xrootd_3rd_copy_bulk(plugin_handle plugin_data,
         gfal2_context_t context, gfalt_params_t params, size_t nbfiles,
         const char* const * srcs, const char* const * dsts,
@@ -317,7 +354,14 @@ int gfal_xrootd_3rd_copy_bulk(plugin_handle plugin_data,
             gfal_xrootd_copy_cleanup(plugin_data, dsts[i],file_errors[i]);
             ++n_failed;
         }
+        //clean the disk cache source if thirdparty
+        if (isThirdParty) {
+            gfal2_log(G_LOG_LEVEL_DEBUG, "Transfer Success, evicting cache for: %s", srcs[i]);
+            gfal_xrootd_evict_cache(context,srcs[i]);
+        }
+
     }
+
 
     return -n_failed;
 }
