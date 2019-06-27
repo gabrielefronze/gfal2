@@ -198,20 +198,40 @@ static void gfal_xrootd_evict_cache(gfal2_context_t context, const char* src)
 
     XrdCl::XRootDStatus status = fs.Query( XrdCl::QueryCode::Config, arg, response );
     
-    gfal2_log(G_LOG_LEVEL_DEBUG, "Response: %s", response->GetBuffer());
+    if (!status.IsOK()) {
+        delete response;
+        return;
+    }
+    gfal2_log(G_LOG_LEVEL_DEBUG, "Source XrootD version: %s", response->GetBuffer());
 
+    bool runEvict = false;
+    std::string xrootd_version = response->GetBuffer();
+    if ((xrootd_version.find("v4") == 0) || (xrootd_version.find("v5") == 0) ) {
+        xrootd_version.erase(0, 1);
+        int major = 0, minor = 0;
+        std::sscanf(xrootd_version.c_str(), "%d.%d", &major, &minor);
+        if (major > 4) {
+            runEvict = true;
+        } else if (major == 4) {
+	    if (minor >= 10) {
+                runEvict = true;
+            }
+        }
+    }
     delete response;
 
 
-    //evict 
-    std::vector<std::string> fileList;
-    XrdCl::URL file(prepare_url(context, src));
-    fileList.emplace_back(file.GetPath());
+    if (runEvict) {
+        gfal2_log(G_LOG_LEVEL_DEBUG, "Found Xrootd version: %s, evicting cache", xrootd_version.c_str());
+        std::vector<std::string> fileList;
+        XrdCl::URL file(prepare_url(context, src));
+        fileList.emplace_back(file.GetPath());
    
-    XrdCl::Buffer *responsePtr = 0;
-    //XrdCl::Status st = fs.Prepare(fileList, XrdCl::PrepareFlags::Flags::Evict, 0, responsePtr, 30);
-    if (responsePtr) {
-    	delete responsePtr;
+        XrdCl::Buffer *responsePtr = 0;
+        XrdCl::Status st = fs.Prepare(fileList, XrdCl::PrepareFlags::Flags::Evict, 0, responsePtr, 30);
+        if (responsePtr) {
+    	    delete responsePtr;
+        }
     }
 }
 
@@ -356,7 +376,6 @@ int gfal_xrootd_3rd_copy_bulk(plugin_handle plugin_data,
         }
         //clean the disk cache source if thirdparty
         if (isThirdParty) {
-            gfal2_log(G_LOG_LEVEL_DEBUG, "Transfer Success, evicting cache for: %s", srcs[i]);
             gfal_xrootd_evict_cache(context,srcs[i]);
         }
 
