@@ -188,13 +188,12 @@ static void gfal_xrootd_evict_cache(gfal2_context_t context, const char* src)
     endpoint.SetPath(std::string());
     XrdCl::FileSystem fs(endpoint);
 
-    //first check if the version of Xrootd is fine, we tend to run this command towards SLAC Xrootd only with version >= 4.10
-
+    //first check if  Xrootd sitename contains CTA
     XrdCl::Buffer *response = 0;
-    std::string version_arg = std::string("version");
+    std::string sitename_arg = std::string("sitename");
 
-    XrdCl::Buffer arg( version_arg.size() );
-    arg.FromString( version_arg );
+    XrdCl::Buffer arg( sitename_arg.size() );
+    arg.FromString( sitename_arg );
 
     XrdCl::XRootDStatus status = fs.Query( XrdCl::QueryCode::Config, arg, response );
     
@@ -202,27 +201,17 @@ static void gfal_xrootd_evict_cache(gfal2_context_t context, const char* src)
         delete response;
         return;
     }
-    gfal2_log(G_LOG_LEVEL_DEBUG, "Source XrootD version: %s", response->GetBuffer());
+    gfal2_log(G_LOG_LEVEL_DEBUG, "Sitename: %s", response->GetBuffer());
 
     bool runEvict = false;
-    std::string xrootd_version = response->GetBuffer();
-    if ((xrootd_version.find("v4") == 0) || (xrootd_version.find("v5") == 0) ) {
-        xrootd_version.erase(0, 1);
-        int major = 0, minor = 0;
-        std::sscanf(xrootd_version.c_str(), "%d.%d", &major, &minor);
-        if (major > 4) {
-            runEvict = true;
-        } else if (major == 4) {
-	    if (minor >= 10) {
-                runEvict = true;
-            }
-        }
+    std::string sitename = response->GetBuffer();
+    if (sitename.find("cern_tape_archive") == 0) {
+        runEvict = true;
     }
     delete response;
 
-
     if (runEvict) {
-        gfal2_log(G_LOG_LEVEL_DEBUG, "Found Xrootd version: %s, evicting cache", xrootd_version.c_str());
+        gfal2_log(G_LOG_LEVEL_DEBUG, "Found CTA, evicting cache", sitename.c_str());
         std::vector<std::string> fileList;
         XrdCl::URL file(prepare_url(context, src));
         fileList.emplace_back(file.GetPath());
