@@ -218,9 +218,7 @@ static void gfal_xrootd_evict_cache(gfal2_context_t context, const char* src)
    
         XrdCl::Buffer *responsePtr = 0;
         XrdCl::Status st = fs.Prepare(fileList, XrdCl::PrepareFlags::Flags::Evict, 0, responsePtr, 30);
-        if (responsePtr) {
-    	    delete responsePtr;
-        }
+    	delete responsePtr;
     }
 }
 
