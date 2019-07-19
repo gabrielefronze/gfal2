@@ -217,9 +217,7 @@ static void gfal_xrootd_evict_cache(gfal2_context_t context, const char* src)
         fileList.emplace_back(file.GetPath());
    
         XrdCl::Buffer *responsePtr = 0;
-#if (XrdMajorVNUM(XrdVNUMBER) == 4 && XrdMinorVNUM(XrdVNUMBER) >= 10) || XrdMajorVNUM(XrdVNUMBER) >= 5
         XrdCl::Status st = fs.Prepare(fileList, XrdCl::PrepareFlags::Flags::Evict, 0, responsePtr, 30);
-#endif
     	delete responsePtr;
     }
 }
