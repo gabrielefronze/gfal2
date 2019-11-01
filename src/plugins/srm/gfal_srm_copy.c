@@ -442,7 +442,7 @@ static int srm_resolve_turls(plugin_handle handle, gfal2_context_t context,
 
     //check if the source file is online in case the SRM_COPY_FAIL_NEARLINE is set
     gboolean fail_nearline = gfal2_get_opt_boolean_with_default(context, "SRM PLUGIN", "COPY_FAIL_NEARLINE", FALSE);
-    if (fail_nearline) {
+    if (fail_nearline && srm_check_url(source)) {
         ssize_t ret = gfal2_getxattr(context,  source, GFAL_XATTR_STATUS, buffer, sizeof(buffer), &tmp_err);
         if (ret > 0 && strlen(buffer) > 0 && tmp_err == NULL) {
 	    if (strncmp(buffer, GFAL_XATTR_STATUS_NEARLINE, sizeof(GFAL_XATTR_STATUS_NEARLINE)) == 0) {
