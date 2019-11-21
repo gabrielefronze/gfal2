@@ -357,7 +357,7 @@ static int gfal_srmv2_release_file_internal(srm_context_t context, gfal_srmv2_op
 int gfal_srmv2_release_fileG(plugin_handle ch, const char *surl,
     const char *token, GError **err)
 {
-    g_return_val_err_if_fail(ch && surl && token, EINVAL, err,
+    g_return_val_err_if_fail(ch && surl, EINVAL, err,
         "[gfal_srmv2_release_fileG] Invalid value handle, surl or token");
     GError *tmp_err = NULL;
     gfal_srmv2_opt *opts = (gfal_srmv2_opt *) ch;

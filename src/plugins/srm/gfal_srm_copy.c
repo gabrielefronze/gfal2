@@ -541,9 +541,7 @@ static int srm_cleanup_copy(plugin_handle handle, gfal2_context_t context,
     if (*err != NULL) {
         srm_rollback_put(handle, context, destination, token_destination, transfer_finished, err);
     }
-    if (token_source[0] != '\0') {
-        srm_release_get(handle, source, token_source, err);
-    }
+    srm_release_get(handle, source, NULL, err);
     return 0;
 }
 
