@@ -3,12 +3,20 @@ cmake_minimum_required (VERSION 2.6)
 if (PLUGIN_GRIDFTP)
     file (GLOB_RECURSE src_gridftp "*.c*")
 
-    find_package (Globus_FTP_CLIENT REQUIRED)
-    find_package (Globus_FTP_CONTROL REQUIRED)
-    find_package (Globus_GASS_COPY REQUIRED)
-    find_package (Globus_COMMON REQUIRED)
-    find_package (Globus_GSS_ASSIST REQUIRED)
-    find_package (Globus_GSSAPI_GSI REQUIRED)
+#    find_package (Globus_FTP_CLIENT REQUIRED HINTS /Library/Globus)
+#    find_package (Globus_FTP_CONTROL REQUIRED HINTS /Library/Globus)
+#    find_package (Globus_GASS_COPY REQUIRED HINTS /Library/Globus)
+#    find_package (Globus_COMMON REQUIRED HINTS /Library/Globus)
+#    find_package (Globus_GSS_ASSIST REQUIRED HINTS /Library/Globus)
+#    find_package (Globus_GSSAPI_GSI REQUIRED HINTS /Library/Globus)
+
+    set(GLOBUS_FTP_CLIENT_LIBRARIES /Library/Globus/lib/libglobus_ftp_client.dylib)
+    set(GLOBUS_FTP_CONTROL_LIBRARIES /Library/Globus/lib/libglobus_ftp_control.dylib)
+    set(GLOBUS_GASS_COPY_LIBRARIES /Library/Globus/lib/libglobus_gass_copy.dylib)
+    set(GLOBUS_COMMON_LIBRARIES /Library/Globus/lib/libglobus_common.dylib)
+    set(GLOBUS_GSS_ASSIST_LIBRARIES /Library/Globus/lib/libglobus_gss_assist.dylib)
+    set(GLOBUS_GSSAPI_GSI_LIBRARIES /Library/Globus/lib/libglobus_gssapi_gsi.dylib)
+
 
     add_definitions( ${GLOBUS_GASS_COPY_CFLAGS})
     add_library (plugin_gridftp MODULE ${src_gridftp})
@@ -22,7 +30,8 @@ if (PLUGIN_GRIDFTP)
                           ${GLOBUS_GSS_ASSIST_LIBRARIES}
                           ${GLOBUS_GSSAPI_GSI_LIBRARIES})
 
-    include_directories(${GLOBUS_GASS_COPY_INCLUDE_DIRS}) 
+    include_directories(/Library/Globus/include)
+    include_directories(${GLOBUS_GASS_COPY_INCLUDE_DIRS})
 
     set_target_properties(plugin_gridftp    PROPERTIES
 								LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/src
